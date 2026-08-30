@@ -6,6 +6,7 @@ import { saveState } from "../storage.js";
 import { makePill } from "../ui.js";
 import { sfxTap } from "../sfx.js";
 import { view } from "../viewport.js";
+import { destroyNameInput, isNameInputFocused, mountNameInput } from "../nameInput.js";
 
 export class SetupScene extends Phaser.Scene {
   constructor() {
@@ -13,13 +14,16 @@ export class SetupScene extends Phaser.Scene {
   }
 
   create() {
-    this.petName = "";
-    this.species = null;
+    this.petName = sanitizeName(this.registry.get("setupName") || "");
+    this.species = this.registry.get("setupSpecies") || null;
+    this.nameOverlay = null;
 
     const { w, h, cx, safe, u, font } = view(this);
     this.layoutW = w;
-    this.layoutH = h;
-    this.events.once("shutdown", () => this.scale.off("resize", this.handleResize, this));
+    this.events.once("shutdown", () => {
+      this.scale.off("resize", this.handleResize, this);
+      destroyNameInput();
+    });
     this.scale.on("resize", this.handleResize, this);
 
     this.add.image(cx, h / 2, "sky").setDisplaySize(w, h);
@@ -44,10 +48,26 @@ export class SetupScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const fieldW = Math.min(280 * u, w - 48 * u);
-    this.nameField = this.makeNameField(cx, safe.top + 140 * u, fieldW, 56 * u, font);
+    const fieldH = 56 * u;
+    const fieldY = safe.top + 140 * u;
+    this.makeNameField(cx, fieldY, fieldW, fieldH);
+    this.nameOverlay = mountNameInput(this, {
+      x: cx,
+      y: fieldY,
+      w: fieldW,
+      h: fieldH,
+      value: this.petName,
+      onChange: (name) => {
+        this.petName = name;
+        this.registry.set("setupName", name);
+        this.refreshStart();
+      },
+    });
 
+    const startY = h - safe.bottom - 56 * u;
+    const chooseY = fieldY + fieldH / 2 + 28 * u;
     this.add
-      .text(cx, safe.top + 198 * u, "Elige tu mascota", {
+      .text(cx, chooseY, "Elige tu mascota", {
         fontFamily: "Fredoka, sans-serif",
         fontSize: font(18),
         color: "#c97b9a",
@@ -55,62 +75,53 @@ export class SetupScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const cardW = Math.min(168 * u, (w - 56 * u) / 2);
-    const cardH = Math.min(300 * u, h * 0.4);
+    const cardsTop = chooseY + 24 * u;
+    const cardsBottom = startY - 48 * u;
     const gap = 16 * u;
-    const cardsY = safe.top + 198 * u + 28 * u + cardH / 2;
+    const cardW = Math.min(168 * u, (w - 56 * u) / 2);
+    const cardH = Math.max(160 * u, Math.min(300 * u, cardsBottom - cardsTop, h * 0.38));
+    const cardsY = cardsTop + cardH / 2;
     this.cards = SPECIES_LIST.map((spec, i) => {
       const x = i === 0 ? cx - cardW / 2 - gap / 2 : cx + cardW / 2 + gap / 2;
       return this.makeSpeciesCard(x, cardsY, spec.id, cardW, cardH, font, u);
     });
 
     const btnW = Math.min(280 * u, w - 48 * u);
-    this.startBtn = makePill(this, cx, h - safe.bottom - 56 * u, btnW, 64 * u, 0xffd1dc, "¡Empezar! 🌸", () => {
+    this.startBtn = makePill(this, cx, startY, btnW, 64 * u, 0xffd1dc, "¡Empezar! 🌸", () => {
       if (!this.canStart()) return;
       sfxTap();
+      destroyNameInput();
+      this.registry.remove("setupName");
+      this.registry.remove("setupSpecies");
       const state = createDefaultState(this.petName, this.species);
       saveState(state);
       this.scene.start("game");
     });
 
+    if (this.species) this.pickSpecies(this.species, true);
     this.refreshStart();
   }
 
   handleResize(gameSize) {
-    if (Math.abs(gameSize.width - this.layoutW) < 12 && Math.abs(gameSize.height - this.layoutH) < 12) {
+    if (isNameInputFocused()) {
+      this.nameOverlay?.place();
+      return;
+    }
+    if (Math.abs(gameSize.width - this.layoutW) < 24) {
+      this.nameOverlay?.place();
       return;
     }
     this.scene.restart();
   }
 
-  makeNameField(x, y, w, h, font) {
-    const container = this.add.container(x, y);
+  makeNameField(x, y, w, h) {
     const shadow = this.add.graphics();
     shadow.fillStyle(0x5a3d4a, 0.12);
-    shadow.fillRoundedRect(-w / 2 + 1, -h / 2 + 4, w, h, h / 2);
+    shadow.fillRoundedRect(x - w / 2 + 1, y - h / 2 + 4, w, h, h / 2);
 
     const bg = this.add.graphics();
     bg.fillStyle(0xfff7fb, 1);
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
-
-    const label = this.add
-      .text(0, 0, "Toca para escribir...", {
-        fontFamily: "Fredoka, sans-serif",
-        fontSize: font(20),
-        color: "#c97b9a",
-        fontStyle: "600",
-      })
-      .setOrigin(0.5);
-
-    container.add([shadow, bg, label]);
-    container.setSize(w, h);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    container.on("pointerup", () => this.askName());
-    container.label = label;
-    return container;
+    bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, h / 2);
   }
 
   makeSpeciesCard(x, y, speciesId, w, h, font, u) {
@@ -127,6 +138,7 @@ export class SetupScene extends Phaser.Scene {
     const ring = this.add.graphics();
     const pet = new Pet(this, 0, 0, speciesId);
     pet.setMood("happy");
+    pet.disableInteractive?.();
     const wrap = this.add.container(0, -10 * u);
     wrap.add(pet);
     wrap.setScale(Phaser.Math.Clamp(Math.min(w, h) / 380, 0.42, 0.9));
@@ -143,14 +155,12 @@ export class SetupScene extends Phaser.Scene {
 
     container.add([shadow, bg, ring, wrap, label]);
     container.setSize(w, h);
+    container.setDepth(8);
     container.setInteractive(
       new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
       Phaser.Geom.Rectangle.Contains,
     );
-    container.on("pointerup", () => {
-      sfxTap();
-      this.pickSpecies(speciesId);
-    });
+    container.on("pointerdown", () => this.pickSpecies(speciesId));
 
     container.ring = ring;
     container.speciesId = speciesId;
@@ -160,22 +170,11 @@ export class SetupScene extends Phaser.Scene {
     return container;
   }
 
-  askName() {
-    const next = window.prompt("¿Cómo se llama tu mascota?", this.petName);
-    if (next == null) return;
-    this.petName = sanitizeName(next);
-    if (this.petName) {
-      this.nameField.label.setText(this.petName);
-      this.nameField.label.setColor("#5a3d4a");
-    } else {
-      this.nameField.label.setText("Toca para escribir...");
-      this.nameField.label.setColor("#c97b9a");
-    }
-    this.refreshStart();
-  }
-
-  pickSpecies(speciesId) {
+  pickSpecies(speciesId, silent = false) {
+    const changed = this.species !== speciesId;
     this.species = speciesId;
+    this.registry.set("setupSpecies", speciesId);
+    if (changed && !silent) sfxTap();
     for (const card of this.cards) {
       const selected = card.speciesId === speciesId;
       card.ring.clear();

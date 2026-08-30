@@ -3,6 +3,7 @@ import { BootScene } from "./scenes/BootScene.js";
 import { TitleScene } from "./scenes/TitleScene.js";
 import { SetupScene } from "./scenes/SetupScene.js";
 import { GameScene } from "./scenes/GameScene.js";
+import { isNameInputFocused } from "./nameInput.js";
 import { cssSize, dpr } from "./viewport.js";
 
 function start() {
@@ -40,6 +41,7 @@ function start() {
   globalThis.game = game;
 
   const refresh = () => {
+    if (isNameInputFocused()) return;
     const next = cssSize();
     const pixelRatio = dpr();
     const width = Math.round(next.width * pixelRatio);
