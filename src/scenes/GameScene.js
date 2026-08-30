@@ -49,6 +49,7 @@ export class GameScene extends Phaser.Scene {
 
     this.add.image(cx, h / 2, "sky").setDisplaySize(w, h);
     this.drawRoom(w, h, cx, u);
+    this.nightVeil = this.add.rectangle(cx, h / 2, w, h, 0x2a1848, 0);
 
     const hudBottom = safe.top + 150 * u;
     const actionsTop = h - safe.bottom - 130 * u;
@@ -79,10 +80,19 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
     this.bubbles = this.add.particles(0, 0, "bubble", {
-      speedY: { min: -80, max: -40 },
+      speedY: { min: -90, max: -36 },
+      speedX: { min: -28, max: 28 },
+      lifespan: 1400,
+      scale: { start: 0.55, end: 1.35 },
+      frequency: 70,
+      quantity: 2,
+      emitting: false,
+    });
+    this.pluses = this.add.particles(0, 0, "plus", {
+      speedY: { min: -70, max: -30 },
       speedX: { min: -20, max: 20 },
-      lifespan: 1200,
-      scale: { start: 0.7, end: 1.2 },
+      lifespan: 900,
+      scale: { start: 0.8, end: 0.2 },
       emitting: false,
     });
 
@@ -300,8 +310,15 @@ export class GameScene extends Phaser.Scene {
     this.hint.setText(
       this.state.sleeping
         ? "Shhh... está soñando 💤"
-        : `Toca a ${this.state.name} para hacerle mimos`,
+        : this.pet.acting
+          ? `${this.state.name} está ocupadito...`
+          : `Toca a ${this.state.name} para hacerle mimos`,
     );
+
+    const veilAlpha = this.state.sleeping ? 0.28 : 0;
+    if (Math.abs(this.nightVeil.alpha - veilAlpha) > 0.02) {
+      this.tweens.add({ targets: this.nightVeil, alpha: veilAlpha, duration: 320 });
+    }
   }
 
   showDeath() {
@@ -318,7 +335,20 @@ export class GameScene extends Phaser.Scene {
     emitter.explode(count);
   }
 
+  busy() {
+    return this.pet.acting || this.state.dead;
+  }
+
+  afterAction() {
+    saveState(this.state);
+    this.refresh();
+  }
+
   onBoop() {
+    if (this.busy()) {
+      if (this.state.sleeping) toast(this, "Está dormidito... 💤");
+      return;
+    }
     const result = boop(this.state);
     if (!result.ok) {
       if (this.state.sleeping) toast(this, "Está dormidito... 💤");
@@ -327,12 +357,12 @@ export class GameScene extends Phaser.Scene {
     sfxBoop();
     this.pet.squash();
     this.burst(this.hearts, this.pet.x, this.pet.y - 40, 5);
-    saveState(this.state);
-    this.refresh();
+    this.afterAction();
     toast(this, result.message);
   }
 
   doFeed() {
+    if (this.busy()) return;
     const result = feed(this.state);
     if (!result.ok) {
       sfxDeny();
@@ -340,14 +370,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     sfxFeed();
-    this.pet.squash();
-    this.burst(this.hearts, this.pet.x, this.pet.y - 20, 4);
+    this.pet.actEat(() => this.refresh());
     saveState(this.state);
     this.refresh();
     toast(this, result.message);
   }
 
   doPlay() {
+    if (this.busy()) return;
     const result = play(this.state);
     if (!result.ok) {
       sfxDeny();
@@ -355,14 +385,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     sfxPlay();
-    this.pet.jump();
-    this.burst(this.stars, this.pet.x, this.pet.y - 10, 10);
+    this.burst(this.stars, this.pet.x, this.pet.y - 10, 8);
+    this.pet.actPlay(() => this.refresh());
     saveState(this.state);
     this.refresh();
     toast(this, result.message);
   }
 
   doBathe() {
+    if (this.busy()) return;
     const result = bathe(this.state);
     if (!result.ok) {
       sfxDeny();
@@ -370,13 +401,20 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     sfxBath();
-    this.burst(this.bubbles, this.pet.x, this.pet.y + 30, 14);
+    this.bubbles.setPosition(this.pet.x, this.pet.y + 40);
+    this.bubbles.start();
+    this.pet.actBathe(() => {
+      this.bubbles.stop();
+      this.burst(this.bubbles, this.pet.x, this.pet.y + 10, 10);
+      this.refresh();
+    });
     saveState(this.state);
     this.refresh();
     toast(this, result.message);
   }
 
   doHeal() {
+    if (this.busy()) return;
     const result = heal(this.state);
     if (!result.ok) {
       sfxDeny();
@@ -384,13 +422,17 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     sfxHeal();
-    this.burst(this.stars, this.pet.x, this.pet.y, 8);
+    this.pet.actHeal(() => {
+      this.burst(this.pluses, this.pet.x, this.pet.y, 8);
+      this.refresh();
+    });
     saveState(this.state);
     this.refresh();
     toast(this, result.message);
   }
 
   doSleep() {
+    if (this.pet.acting) return;
     const result = toggleSleep(this.state);
     if (!result.ok) {
       sfxDeny();
@@ -398,8 +440,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     sfxSleep();
-    saveState(this.state);
-    this.refresh();
+    this.afterAction();
     toast(this, result.message);
   }
 
@@ -411,5 +452,8 @@ export class GameScene extends Phaser.Scene {
     }
     const tired = this.state.stats.energia < 18 && !this.state.sleeping && !this.state.dead;
     this.shadow.setScale(tired ? 0.85 : 1, 1);
+    if (this.bubbles.emitting) {
+      this.bubbles.setPosition(this.pet.x, this.pet.y + 36);
+    }
   }
 }
