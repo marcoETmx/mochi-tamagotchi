@@ -1,3 +1,5 @@
+import { normalizeSpecies } from "./species.js";
+
 const KEY = "mochi-tamagotchi-v1";
 
 export function loadState() {
@@ -6,6 +8,7 @@ export function loadState() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data?.stats) return null;
+    data.species = normalizeSpecies(data.species);
     return data;
   } catch {
     return null;

@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { Pet } from "../objects/Pet.js";
-import { applyElapsed, createDefaultState } from "../petState.js";
+import { applyElapsed } from "../petState.js";
 import { loadState, saveState } from "../storage.js";
+import { DEFAULT_SPECIES } from "../species.js";
 import { makePill } from "../ui.js";
 import { sfxTap } from "../sfx.js";
 import { view } from "../viewport.js";
@@ -27,7 +28,7 @@ export class TitleScene extends Phaser.Scene {
     const preview = this.add.container(cx, petY);
     const shadow = this.add.ellipse(0, 88, 150, 32, 0x5a3d4a, 0.14);
     preview.add(shadow);
-    const pet = new Pet(this, 0, 0);
+    const pet = new Pet(this, 0, 0, saved?.species || DEFAULT_SPECIES);
     preview.add(pet);
     pet.setMood("happy");
     const petScale = Phaser.Math.Clamp(Math.min(w, h) / 700, 0.8, 2.4);
@@ -65,20 +66,20 @@ export class TitleScene extends Phaser.Scene {
     const btnW = Math.min(280 * u, w - 48 * u);
     makePill(this, cx, h - safe.bottom - 110 * u, btnW, 68 * u, 0xfff7fb, label, () => {
       sfxTap();
-      let state = loadState();
+      const state = loadState();
       if (!state || state.dead) {
-        state = createDefaultState();
-        saveState(state);
-      } else {
-        applyElapsed(state);
-        saveState(state);
+        this.scene.start("setup");
+        return;
       }
+      applyElapsed(state);
+      saveState(state);
       this.scene.start("game");
     });
 
     if (saved?.dead) {
+      const who = saved.name || "tu mascota";
       this.add
-        .text(cx, h - safe.bottom - 58 * u, "Tu anterior Mochi descansa en paz...", {
+        .text(cx, h - safe.bottom - 58 * u, `Tu anterior ${who} descansa en paz...`, {
           fontFamily: "Fredoka, sans-serif",
           fontSize: font(14),
           color: "#c97b9a",

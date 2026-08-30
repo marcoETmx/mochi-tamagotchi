@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { BootScene } from "./scenes/BootScene.js";
 import { TitleScene } from "./scenes/TitleScene.js";
+import { SetupScene } from "./scenes/SetupScene.js";
 import { GameScene } from "./scenes/GameScene.js";
 import { cssSize, dpr } from "./viewport.js";
 
@@ -32,7 +33,7 @@ function start() {
     input: {
       activePointers: 3,
     },
-    scene: [BootScene, TitleScene, GameScene],
+    scene: [BootScene, TitleScene, SetupScene, GameScene],
   };
 
   const game = new Phaser.Game(config);

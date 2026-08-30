@@ -13,6 +13,7 @@ import {
   play,
   toggleSleep,
 } from "../petState.js";
+import { sanitizeName } from "../species.js";
 import { clearState, loadState, saveState } from "../storage.js";
 import {
   isMuted,
@@ -55,8 +56,8 @@ export class GameScene extends Phaser.Scene {
     const petScale = Phaser.Math.Clamp(Math.min(w, actionsTop - hudBottom) / 420, 0.72, 2.6);
 
     this.shadow = this.add.ellipse(cx, petY + 88 * petScale, 160 * petScale, 34 * petScale, 0x5a3d4a, 0.16);
-    this.pet = new Pet(this, cx, petY);
-    this.pet.setScale(petScale);
+    this.pet = new Pet(this, cx, petY, this.state.species);
+    this.pet.setDisplayScale(petScale);
     this.pet.setInteractive(
       new Phaser.Geom.Ellipse(0, 10, 200, 210),
       Phaser.Geom.Ellipse.Contains,
@@ -217,7 +218,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.hint = this.add
-      .text(w / 2, h - safe.bottom - 10 * u, "Toca a Mochi para hacerle mimos", {
+      .text(w / 2, h - safe.bottom - 10 * u, `Toca a ${this.state.name} para hacerle mimos`, {
         fontFamily: "Fredoka, sans-serif",
         fontSize: font(14),
         color: "#c97b9a",
@@ -256,11 +257,7 @@ export class GameScene extends Phaser.Scene {
     const again = makePill(this, cx, h * 0.3 + 220 * u, Math.min(240 * u, cardW - 40 * u), 58 * u, 0xffd1dc, "Nueva mascota 🌸", () => {
       sfxTap();
       clearState();
-      this.state = createDefaultState();
-      saveState(this.state);
-      this.deathLayer.setVisible(false);
-      this.pet.clearDeadEyes();
-      this.refresh();
+      this.scene.start("setup");
     });
 
     this.deathLayer.add([veil, card, title, this.deathMsg, again]);
@@ -269,7 +266,7 @@ export class GameScene extends Phaser.Scene {
   rename() {
     const next = window.prompt("¿Cómo se llama tu mascota?", this.state.name);
     if (!next) return;
-    const name = next.trim().slice(0, 12);
+    const name = sanitizeName(next);
     if (!name) return;
     this.state.name = name;
     saveState(this.state);
@@ -303,7 +300,7 @@ export class GameScene extends Phaser.Scene {
     this.hint.setText(
       this.state.sleeping
         ? "Shhh... está soñando 💤"
-        : "Toca a Mochi para hacerle mimos",
+        : `Toca a ${this.state.name} para hacerle mimos`,
     );
   }
 

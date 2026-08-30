@@ -1,3 +1,5 @@
+import { DEFAULT_SPECIES, normalizeSpecies, sanitizeName } from "./species.js";
+
 const MAX = 100;
 
 export const STATS = [
@@ -19,10 +21,12 @@ export function clamp(value, min = 0, max = MAX) {
   return Math.max(min, Math.min(max, value));
 }
 
-export function createDefaultState(name = "Mochi") {
+export function createDefaultState(name = "Mochi", species = DEFAULT_SPECIES) {
   const now = Date.now();
+  const trimmed = sanitizeName(name);
   return {
-    name,
+    name: trimmed || "Mochi",
+    species: normalizeSpecies(species),
     bornAt: now,
     lastTick: now,
     sleeping: false,

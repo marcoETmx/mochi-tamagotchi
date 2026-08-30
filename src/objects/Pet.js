@@ -1,20 +1,24 @@
 import Phaser from "phaser";
+import { SPECIES, normalizeSpecies } from "../species.js";
 
 const PUPIL_COLOR = 0x3d2c3a;
 
 export class Pet extends Phaser.GameObjects.Container {
-  constructor(scene, x, y) {
+  constructor(scene, x, y, species = "tlacuache") {
     super(scene, x, y);
     scene.add.existing(this);
+    this.displayScale = 1;
     this.mood = "happy";
+    this.species = normalizeSpecies(species);
     this.blinkUntil = 0;
     this.nextBlink = scene.time.now + 1800;
 
-    this.body = scene.add.image(0, 8, "pet-body").setDisplaySize(210, 210);
+    this.backExtras = scene.add.graphics();
+    this.body = scene.add.image(0, 8, SPECIES[this.species].bodyKey).setDisplaySize(210, 210);
     this.spots = scene.add.graphics();
-    this.sprout = scene.add.graphics();
-    this.leftArm = scene.add.ellipse(-78, 52, 38, 22, 0xffb3d1).setAngle(-22);
-    this.rightArm = scene.add.ellipse(78, 52, 38, 22, 0xffb3d1).setAngle(22);
+    this.frontExtras = scene.add.graphics();
+    this.leftArm = scene.add.ellipse(-78, 52, 38, 22, 0xc4b8aa).setAngle(-22);
+    this.rightArm = scene.add.ellipse(78, 52, 38, 22, 0xc4b8aa).setAngle(22);
     this.leftBlush = scene.add.ellipse(-46, 28, 28, 16, 0xff8fab, 0.55);
     this.rightBlush = scene.add.ellipse(46, 28, 28, 16, 0xff8fab, 0.55);
 
@@ -24,19 +28,20 @@ export class Pet extends Phaser.GameObjects.Container {
     this.rightPupil = scene.add.ellipse(28, -4, 18, 22, PUPIL_COLOR);
     this.leftShine = scene.add.ellipse(-34, -14, 8, 10, 0xffffff);
     this.rightShine = scene.add.ellipse(22, -14, 8, 10, 0xffffff);
-    this.leftLid = scene.add.ellipse(-28, -8, 40, 46, 0xffb3d1).setVisible(false);
-    this.rightLid = scene.add.ellipse(28, -8, 40, 46, 0xffb3d1).setVisible(false);
+    this.leftLid = scene.add.ellipse(-28, -8, 40, 46, 0xcfc4b8).setVisible(false);
+    this.rightLid = scene.add.ellipse(28, -8, 40, 46, 0xcfc4b8).setVisible(false);
 
     this.mouth = scene.add.graphics();
     this.sleepEyes = scene.add.graphics();
     this.zzzs = [];
 
     this.add([
-      this.sprout,
+      this.backExtras,
       this.leftArm,
       this.rightArm,
       this.body,
       this.spots,
+      this.frontExtras,
       this.leftBlush,
       this.rightBlush,
       this.leftEyeWhite,
@@ -52,17 +57,44 @@ export class Pet extends Phaser.GameObjects.Container {
     ]);
 
     this.setSize(200, 210);
-    this.drawSprout();
+    this.applySpeciesLook();
     this.drawMouth("happy");
+    this.startIdle();
+  }
+
+  setSpecies(species) {
+    this.species = normalizeSpecies(species);
+    this.applySpeciesLook();
+  }
+
+  applySpeciesLook() {
+    const spec = SPECIES[this.species];
+    this.leftArm.setFillStyle(spec.armColor);
+    this.rightArm.setFillStyle(spec.armColor);
+    this.leftLid.setFillStyle(spec.lidColor);
+    this.rightLid.setFillStyle(spec.lidColor);
+    this.applyBodyTexture();
+    this.drawSpeciesFeatures();
+  }
+
+  applyBodyTexture() {
+    const spec = SPECIES[this.species];
+    this.body.setTexture(this.mood === "sick" ? spec.sickKey : spec.bodyKey);
+  }
+
+  setDisplayScale(scale) {
+    this.displayScale = scale;
+    this.setScale(scale);
     this.startIdle();
   }
 
   startIdle() {
     this.idleTween?.stop();
+    const s = this.displayScale;
     this.idleTween = this.scene.tweens.add({
       targets: this,
-      scaleY: 1.035,
-      scaleX: 0.985,
+      scaleY: s * 1.035,
+      scaleX: s * 0.985,
       yoyo: true,
       duration: this.mood === "sleep" ? 1400 : 900,
       repeat: -1,
@@ -80,16 +112,47 @@ export class Pet extends Phaser.GameObjects.Container {
     });
   }
 
-  drawSprout() {
-    const g = this.sprout;
-    g.clear();
-    g.fillStyle(0x81c784, 1);
-    g.fillEllipse(0, -102, 18, 28);
-    g.fillStyle(0xaed581, 1);
-    g.fillEllipse(-16, -108, 22, 14);
-    g.fillEllipse(16, -108, 22, 14);
-    g.fillStyle(0xff8fab, 1);
-    g.fillCircle(0, -118, 5);
+  drawSpeciesFeatures() {
+    const back = this.backExtras;
+    const front = this.frontExtras;
+    back.clear();
+    front.clear();
+
+    if (this.species === "tlacuache") {
+      back.fillStyle(0xd8b4b4, 1);
+      back.fillEllipse(82, 68, 92, 22);
+      back.fillStyle(0xe8c4c4, 1);
+      back.fillCircle(124, 54, 11);
+
+      back.fillStyle(0xb8a898, 1);
+      back.fillEllipse(-42, -88, 36, 50);
+      back.fillEllipse(42, -88, 36, 50);
+      back.fillStyle(0xffb3c6, 1);
+      back.fillEllipse(-42, -86, 18, 28);
+      back.fillEllipse(42, -86, 18, 28);
+
+      front.fillStyle(0xff8fab, 1);
+      front.fillEllipse(0, 22, 16, 12);
+      front.fillStyle(0xffc1d8, 1);
+      front.fillCircle(-3, 20, 3);
+      return;
+    }
+
+    back.fillStyle(0xe8d5c4, 1);
+    back.fillEllipse(-36, 94, 22, 28);
+    back.fillEllipse(-12, 98, 20, 26);
+    back.fillEllipse(12, 98, 20, 26);
+    back.fillEllipse(36, 94, 22, 28);
+
+    back.fillStyle(0xe8d5c4, 1);
+    back.fillEllipse(-38, -78, 22, 32);
+    back.fillEllipse(38, -78, 22, 32);
+    back.fillStyle(0xffcbb8, 1);
+    back.fillEllipse(-38, -78, 12, 20);
+    back.fillEllipse(38, -78, 12, 20);
+
+    front.fillStyle(0x5a3d4a, 1);
+    front.fillEllipse(0, 22, 8, 6);
   }
 
   drawMouth(mood) {
@@ -151,7 +214,7 @@ export class Pet extends Phaser.GameObjects.Container {
       return;
     }
     this.mood = mood;
-    this.body.setTexture(mood === "sick" ? "pet-body-sick" : "pet-body");
+    this.applyBodyTexture();
     this.drawMouth(mood);
     this.drawSpots(mood === "dirty");
     this.drawSleepEyes(mood === "sleep");
@@ -235,10 +298,11 @@ export class Pet extends Phaser.GameObjects.Container {
   }
 
   squash() {
+    const s = this.displayScale;
     this.scene.tweens.add({
       targets: this,
-      scaleX: 1.12,
-      scaleY: 0.88,
+      scaleX: s * 1.12,
+      scaleY: s * 0.88,
       duration: 90,
       yoyo: true,
       ease: "Sine.out",
