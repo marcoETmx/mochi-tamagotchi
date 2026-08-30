@@ -3,7 +3,7 @@ import { Pet } from "../objects/Pet.js";
 import { createDefaultState } from "../petState.js";
 import { SPECIES_LIST, sanitizeName } from "../species.js";
 import { saveState } from "../storage.js";
-import { makePill } from "../ui.js";
+import { enableContainerInput, makePill } from "../ui.js";
 import { sfxTap } from "../sfx.js";
 import { view } from "../viewport.js";
 
@@ -103,11 +103,7 @@ export class SetupScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     container.add([shadow, bg, label]);
-    container.setSize(w, h);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    enableContainerInput(container, w, h);
     container.on("pointerup", () => this.askName());
     container.label = label;
     return container;
@@ -142,11 +138,7 @@ export class SetupScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     container.add([shadow, bg, ring, wrap, label]);
-    container.setSize(w, h);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    enableContainerInput(container, w, h);
     container.on("pointerup", () => {
       sfxTap();
       this.pickSpecies(speciesId);

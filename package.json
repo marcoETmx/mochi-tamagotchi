@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host --port 4173",
-    "test": "node --test src/petState.test.js"
+    "test": "node --test src/*.test.js"
   },
   "dependencies": {
     "phaser": "^3.88.2"
