@@ -74,7 +74,7 @@ export class SetupScene extends Phaser.Scene {
     const chooseTop = fieldY + fieldH / 2 + 52 * u;
     const cardsBottom = btnY - btnH / 2 - 18 * u;
     const cardW = Math.min(168 * u, (w - 56 * u) / 2);
-    const cardH = Math.max(160 * u, Math.min(cardsBottom - chooseTop, 280 * u));
+    const cardH = Math.max(180 * u, Math.min(cardsBottom - chooseTop, 360 * u));
     const gap = 16 * u;
     const cardsY = chooseTop + cardH / 2;
 
@@ -238,8 +238,8 @@ export class SetupScene extends Phaser.Scene {
     g.fillEllipse(w * 0.78, h * 0.25, 100 * u, 52 * u);
     g.fillEllipse(w * 0.88, h * 0.255, 64 * u, 36 * u);
     g.fillStyle(0xfff0c2, 1);
-    g.fillCircle(w * 0.12, h * 0.11, 24 * u);
+    g.fillCircle(w * 0.88, h * 0.11, 24 * u);
     g.fillStyle(0xffe08a, 0.35);
-    g.fillCircle(w * 0.12, h * 0.11, 38 * u);
+    g.fillCircle(w * 0.88, h * 0.11, 38 * u);
   }
 }
