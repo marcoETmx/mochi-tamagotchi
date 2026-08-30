@@ -6,7 +6,7 @@ import { saveState } from "../storage.js";
 import { makePill, toast } from "../ui.js";
 import { sfxDeny, sfxTap } from "../sfx.js";
 import { view } from "../viewport.js";
-import { mountNameField } from "../nameInput.js";
+import { mountNameField, isNameInputFocused } from "../nameInput.js";
 
 export class SetupScene extends Phaser.Scene {
   static draft = { name: "", species: null };
@@ -102,6 +102,7 @@ export class SetupScene extends Phaser.Scene {
   }
 
   handleResize(gameSize) {
+    if (isNameInputFocused()) return;
     if (Math.abs(gameSize.width - this.layoutW) < 12) return;
     this.scene.restart();
   }

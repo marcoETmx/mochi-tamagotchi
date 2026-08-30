@@ -80,12 +80,20 @@ export function makePill(scene, x, y, w, h, fill, text, onClick) {
     new Phaser.Geom.Rectangle(-w / 2 - px(8), -h / 2 - px(8), w + px(16), h + px(16)),
     Phaser.Geom.Rectangle.Contains,
   );
+  let armed = false;
   container.on("pointerdown", () => {
+    armed = true;
     scene.tweens.add({ targets: container, scale: 0.96, duration: 70 });
   });
   container.on("pointerup", () => {
     scene.tweens.add({ targets: container, scale: 1, duration: 90, ease: "Back.out" });
+    if (!armed) return;
+    armed = false;
     onClick();
+  });
+  container.on("pointerupoutside", () => {
+    armed = false;
+    scene.tweens.add({ targets: container, scale: 1, duration: 90 });
   });
   container.on("pointerout", () => {
     scene.tweens.add({ targets: container, scale: 1, duration: 90 });

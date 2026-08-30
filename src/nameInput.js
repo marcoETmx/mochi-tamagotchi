@@ -4,6 +4,11 @@ function gameParent() {
   return document.getElementById("game") || document.body;
 }
 
+export function isNameInputFocused() {
+  const el = document.activeElement;
+  return Boolean(el && el.classList?.contains("pet-name-field"));
+}
+
 function placeOver(el, scene, { x, y, w, h }) {
   const canvas = scene.game.canvas.getBoundingClientRect();
   const parent = el.offsetParent?.getBoundingClientRect?.() || gameParent().getBoundingClientRect();
