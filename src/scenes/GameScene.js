@@ -27,7 +27,8 @@ import {
   sfxTap,
   toggleMute,
 } from "../sfx.js";
-import { H, W, makeButton, makePill, toast } from "../ui.js";
+import { makeButton, makePill, toast } from "../ui.js";
+import { view } from "../viewport.js";
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -39,13 +40,25 @@ export class GameScene extends Phaser.Scene {
     applyElapsed(this.state);
     saveState(this.state);
 
-    this.add.image(W / 2, H / 2, "sky");
-    this.drawRoom();
+    const { w, h, cx, safe, u, font } = view(this);
+    this.layoutW = w;
+    this.layoutH = h;
+    this.events.once("shutdown", () => this.scale.off("resize", this.handleResize, this));
+    this.scale.on("resize", this.handleResize, this);
 
-    this.shadow = this.add.ellipse(W / 2, 478, 160, 34, 0x5a3d4a, 0.16);
-    this.pet = new Pet(this, W / 2, 390);
+    this.add.image(cx, h / 2, "sky").setDisplaySize(w, h);
+    this.drawRoom(w, h, cx, u);
+
+    const hudBottom = safe.top + 150 * u;
+    const actionsTop = h - safe.bottom - 130 * u;
+    const petY = hudBottom + (actionsTop - hudBottom) * 0.48;
+    const petScale = Phaser.Math.Clamp(Math.min(w, actionsTop - hudBottom) / 420, 0.72, 2.6);
+
+    this.shadow = this.add.ellipse(cx, petY + 88 * petScale, 160 * petScale, 34 * petScale, 0x5a3d4a, 0.16);
+    this.pet = new Pet(this, cx, petY);
+    this.pet.setScale(petScale);
     this.pet.setInteractive(
-      new Phaser.Geom.Ellipse(0, 10, 180, 190),
+      new Phaser.Geom.Ellipse(0, 10, 200, 210),
       Phaser.Geom.Ellipse.Contains,
     );
     this.pet.on("pointerup", () => this.onBoop());
@@ -72,10 +85,10 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
 
-    this.buildHud();
-    this.buildActions();
+    this.buildHud(w, safe, u, font);
+    this.buildActions(w, h, safe, u, font);
     this.deathLayer = this.add.container(0, 0).setDepth(50).setVisible(false);
-    this.buildDeath();
+    this.buildDeath(w, h, cx, u, font);
 
     this.time.addEvent({
       delay: 1000,
@@ -87,63 +100,73 @@ export class GameScene extends Phaser.Scene {
     if (this.state.dead) this.showDeath();
   }
 
-  drawRoom() {
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.5);
-    g.fillEllipse(64, 236, 86, 44);
-    g.fillEllipse(102, 236, 62, 34);
-    g.fillEllipse(318, 218, 96, 48);
-    g.fillEllipse(354, 222, 58, 32);
-
-    g.fillStyle(0xfff0c2, 1);
-    g.fillCircle(58, 108, 26);
-    g.fillStyle(0xffe08a, 0.32);
-    g.fillCircle(58, 108, 40);
-
-    g.fillStyle(0xf8e1c4, 1);
-    g.fillRoundedRect(28, 248, 92, 108, 18);
-    g.fillStyle(0x9bd4ff, 0.85);
-    g.fillRoundedRect(38, 258, 72, 88, 12);
-    g.fillStyle(0xffffff, 0.35);
-    g.fillRoundedRect(42, 262, 28, 34, 6);
-
-    g.fillStyle(0xffc1d8, 0.9);
-    g.fillRoundedRect(0, 500, W, 360, 0);
-    g.fillStyle(0xffd6e7, 1);
-    g.fillEllipse(W / 2, 508, 340, 70);
-
-    g.fillStyle(0x81c784, 1);
-    g.fillEllipse(48, 500, 70, 36);
-    g.fillEllipse(342, 502, 64, 32);
-    g.fillStyle(0xf48fb1, 1);
-    g.fillCircle(48, 478, 10);
-    g.fillCircle(342, 480, 9);
+  handleResize(gameSize) {
+    if (Math.abs(gameSize.width - this.layoutW) < 12 && Math.abs(gameSize.height - this.layoutH) < 12) {
+      return;
+    }
+    this.scene.restart();
   }
 
-  buildHud() {
+  drawRoom(w, h, cx, u) {
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.5);
+    g.fillEllipse(w * 0.16, h * 0.28, 86 * u, 44 * u);
+    g.fillEllipse(w * 0.26, h * 0.28, 62 * u, 34 * u);
+    g.fillEllipse(w * 0.82, h * 0.26, 96 * u, 48 * u);
+    g.fillEllipse(w * 0.91, h * 0.265, 58 * u, 32 * u);
+
+    g.fillStyle(0xfff0c2, 1);
+    g.fillCircle(w * 0.15, h * 0.13, 26 * u);
+    g.fillStyle(0xffe08a, 0.32);
+    g.fillCircle(w * 0.15, h * 0.13, 40 * u);
+
+    g.fillStyle(0xf8e1c4, 1);
+    g.fillRoundedRect(w * 0.07, h * 0.29, 92 * u, 108 * u, 18 * u);
+    g.fillStyle(0x9bd4ff, 0.85);
+    g.fillRoundedRect(w * 0.07 + 10 * u, h * 0.29 + 10 * u, 72 * u, 88 * u, 12 * u);
+    g.fillStyle(0xffffff, 0.35);
+    g.fillRoundedRect(w * 0.07 + 14 * u, h * 0.29 + 14 * u, 28 * u, 34 * u, 6 * u);
+
+    const floorTop = h * 0.58;
+    g.fillStyle(0xffc1d8, 0.9);
+    g.fillRoundedRect(0, floorTop, w, h - floorTop, 0);
+    g.fillStyle(0xffd6e7, 1);
+    g.fillEllipse(cx, floorTop + 8 * u, Math.min(w * 0.88, 360 * u), 70 * u);
+
+    g.fillStyle(0x81c784, 1);
+    g.fillEllipse(w * 0.12, floorTop, 70 * u, 36 * u);
+    g.fillEllipse(w * 0.88, floorTop + 2 * u, 64 * u, 32 * u);
+    g.fillStyle(0xf48fb1, 1);
+    g.fillCircle(w * 0.12, floorTop - 22 * u, 10 * u);
+    g.fillCircle(w * 0.88, floorTop - 20 * u, 9 * u);
+  }
+
+  buildHud(w, safe, u, font) {
+    const top = safe.top + 8 * u;
+    const cardH = 132 * u;
     const card = this.add.graphics();
     card.fillStyle(0xfff7fb, 0.92);
-    card.fillRoundedRect(16, 18, W - 32, 132, 24);
+    card.fillRoundedRect(16 * u, top, w - 32 * u, cardH, 24 * u);
 
     this.nameText = this.add
-      .text(32, 30, this.state.name, {
+      .text(32 * u, top + 12 * u, this.state.name, {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "24px",
+        fontSize: font(24),
         color: "#5a3d4a",
         fontStyle: "700",
       })
       .setInteractive({ useHandCursor: true });
     this.nameText.on("pointerup", () => this.rename());
 
-    this.dayText = this.add.text(32, 56, "Día 0", {
+    this.dayText = this.add.text(32 * u, top + 38 * u, "Día 0", {
       fontFamily: "Fredoka, sans-serif",
-      fontSize: "13px",
+      fontSize: font(13),
       color: "#c97b9a",
       fontStyle: "600",
     });
 
     this.muteBtn = this.add
-      .text(W - 36, 30, "🔊", { fontSize: "20px" })
+      .text(w - 36 * u, top + 12 * u, "🔊", { fontSize: font(20) })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true });
     this.muteBtn.on("pointerup", () => {
@@ -155,23 +178,24 @@ export class GameScene extends Phaser.Scene {
     STATS.forEach((stat, i) => {
       const col = i % 3;
       const row = Math.floor(i / 3);
-      const x = 32 + col * 118;
-      const y = 78 + row * 34;
+      const x = 32 * u + col * Math.min(118 * u, (w - 64 * u) / 3);
+      const y = top + 60 * u + row * 34 * u;
       this.add.text(x, y, `${stat.icon} ${stat.label}`, {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "12px",
+        fontSize: font(12),
         color: "#8a6574",
         fontStyle: "600",
       });
       const track = this.add.graphics();
       track.fillStyle(0xf3d6e2, 1);
-      track.fillRoundedRect(x, y + 16, 100, 10, 5);
+      const barW = Math.min(100 * u, (w - 80 * u) / 3 - 8 * u);
+      track.fillRoundedRect(x, y + 16 * u, barW, 10 * u, 5 * u);
       const fill = this.add.graphics();
-      this.bars[stat.key] = { fill, color: stat.color, x, y: y + 16 };
+      this.bars[stat.key] = { fill, color: stat.color, x, y: y + 16 * u, width: barW, thickness: 10 * u, radius: 5 * u };
     });
   }
 
-  buildActions() {
+  buildActions(w, h, safe, u, font) {
     const specs = [
       { emoji: "🍪", label: "Comer", color: 0xffd1dc, fn: () => this.doFeed() },
       { emoji: "🎾", label: "Jugar", color: 0xffe7a8, fn: () => this.doPlay() },
@@ -180,53 +204,56 @@ export class GameScene extends Phaser.Scene {
       { emoji: "🌙", label: "Dormir", color: 0xe4d7ff, fn: () => this.doSleep() },
     ];
 
-    this.actionButtons = specs.map((spec, i) => {
-      const gap = 12;
-      const bw = 66;
-      const total = specs.length * bw + (specs.length - 1) * gap;
-      const start = (W - total) / 2 + bw / 2;
-      const x = start + i * (bw + gap);
-      const btn = makeButton(this, x, 732, bw, 82, spec.color, spec.emoji, spec.label, spec.fn);
-      return btn;
-    });
+    const gap = 8 * u;
+    const side = Math.max(safe.left, safe.right, 16 * u);
+    const available = w - side * 2;
+    const bw = Math.min(84 * u, (available - gap * (specs.length - 1)) / specs.length);
+    const bh = Math.max(78 * u, Math.min(92 * u, h * 0.1));
+    const start = side + bw / 2;
+    const y = h - safe.bottom - bh / 2 - 36 * u;
+
+    this.actionButtons = specs.map((spec, i) =>
+      makeButton(this, start + i * (bw + gap), y, bw, bh, spec.color, spec.emoji, spec.label, spec.fn),
+    );
 
     this.hint = this.add
-      .text(W / 2, 800, "Toca a Mochi para hacerle mimos", {
+      .text(w / 2, h - safe.bottom - 10 * u, "Toca a Mochi para hacerle mimos", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "14px",
+        fontSize: font(14),
         color: "#c97b9a",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 1);
 
     this.sleepBtn = this.actionButtons[4];
   }
 
-  buildDeath() {
-    const veil = this.add.rectangle(W / 2, H / 2, W, H, 0x3d2c3a, 0.42);
+  buildDeath(w, h, cx, u, font) {
+    const veil = this.add.rectangle(cx, h / 2, w, h, 0x3d2c3a, 0.42);
+    const cardW = Math.min(w - 48 * u, 340 * u);
     const card = this.add.graphics();
     card.fillStyle(0xfff7fb, 0.97);
-    card.fillRoundedRect(36, 250, W - 72, 300, 28);
+    card.fillRoundedRect(cx - cardW / 2, h * 0.3, cardW, 300 * u, 28 * u);
 
     const title = this.add
-      .text(W / 2, 300, "Oh no...", {
+      .text(cx, h * 0.3 + 50 * u, "Oh no...", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "32px",
+        fontSize: font(32),
         color: "#5a3d4a",
         fontStyle: "700",
       })
       .setOrigin(0.5);
 
     this.deathMsg = this.add
-      .text(W / 2, 360, "", {
+      .text(cx, h * 0.3 + 110 * u, "", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "16px",
+        fontSize: font(16),
         color: "#8a6574",
         align: "center",
-        wordWrap: { width: 260 },
+        wordWrap: { width: cardW - 40 * u },
       })
       .setOrigin(0.5);
 
-    const again = makePill(this, W / 2, 470, 220, 58, 0xffd1dc, "Nueva mascota 🌸", () => {
+    const again = makePill(this, cx, h * 0.3 + 220 * u, Math.min(240 * u, cardW - 40 * u), 58 * u, 0xffd1dc, "Nueva mascota 🌸", () => {
       sfxTap();
       clearState();
       this.state = createDefaultState();
@@ -267,7 +294,7 @@ export class GameScene extends Phaser.Scene {
       const value = this.state.stats[stat.key];
       bar.fill.clear();
       bar.fill.fillStyle(stat.color, 1);
-      bar.fill.fillRoundedRect(bar.x, bar.y, Math.max(8, 100 * (value / 100)), 10, 5);
+      bar.fill.fillRoundedRect(bar.x, bar.y, Math.max(8, bar.width * (value / 100)), bar.thickness, bar.radius);
     });
 
     this.sleepBtn.labelText.setText(this.state.sleeping ? "Despertar" : "Dormir");

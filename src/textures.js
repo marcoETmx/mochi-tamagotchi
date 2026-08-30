@@ -7,7 +7,7 @@ function canvasTexture(scene, key, width, height, draw) {
 }
 
 export function createTextures(scene) {
-  canvasTexture(scene, "sky", 390, 844, (ctx, w, h) => {
+  canvasTexture(scene, "sky", 1200, 2400, (ctx, w, h) => {
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, "#ffd3ea");
     g.addColorStop(0.38, "#ffe7f4");
@@ -17,25 +17,25 @@ export function createTextures(scene) {
     ctx.fillRect(0, 0, w, h);
   });
 
-  canvasTexture(scene, "pet-body", 256, 256, (ctx, s) => {
-    const g = ctx.createRadialGradient(s * 0.38, s * 0.34, 16, s * 0.5, s * 0.52, s * 0.46);
+  canvasTexture(scene, "pet-body", 512, 512, (ctx, s) => {
+    const g = ctx.createRadialGradient(s * 0.38, s * 0.34, 32, s * 0.5, s * 0.52, s * 0.46);
     g.addColorStop(0, "#fff3f8");
     g.addColorStop(0.42, "#ffb7d5");
     g.addColorStop(1, "#f48fb1");
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.ellipse(s / 2, s / 2 + 8, 108, 100, 0, 0, Math.PI * 2);
+    ctx.ellipse(s / 2, s / 2 + 16, 216, 200, 0, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  canvasTexture(scene, "pet-body-sick", 256, 256, (ctx, s) => {
-    const g = ctx.createRadialGradient(s * 0.38, s * 0.34, 16, s * 0.5, s * 0.52, s * 0.46);
+  canvasTexture(scene, "pet-body-sick", 512, 512, (ctx, s) => {
+    const g = ctx.createRadialGradient(s * 0.38, s * 0.34, 32, s * 0.5, s * 0.52, s * 0.46);
     g.addColorStop(0, "#f3ffe8");
     g.addColorStop(0.45, "#c5e1a5");
     g.addColorStop(1, "#9ccc65");
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.ellipse(s / 2, s / 2 + 8, 108, 100, 0, 0, Math.PI * 2);
+    ctx.ellipse(s / 2, s / 2 + 16, 216, 200, 0, 0, Math.PI * 2);
     ctx.fill();
   });
 

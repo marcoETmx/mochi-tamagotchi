@@ -1,16 +1,8 @@
 import Phaser from "phaser";
-
-export const W = 390;
-export const H = 844;
-
-export function roundedPanel(scene, x, y, w, h, fill, radius = 22, alpha = 0.92) {
-  const g = scene.add.graphics();
-  g.fillStyle(fill, alpha);
-  g.fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
-  return g;
-}
+import { view } from "./viewport.js";
 
 export function makeButton(scene, x, y, w, h, fill, emoji, label, onClick) {
+  const { font, px } = view(scene);
   const container = scene.add.container(x, y);
   const shadow = scene.add.graphics();
   shadow.fillStyle(0x5a3d4a, 0.12);
@@ -21,12 +13,12 @@ export function makeButton(scene, x, y, w, h, fill, emoji, label, onClick) {
   bg.fillRoundedRect(-w / 2, -h / 2, w, h, 20);
 
   const emojiText = scene.add
-    .text(0, -11, emoji, { fontSize: "26px" })
+    .text(0, -h * 0.14, emoji, { fontSize: font(28) })
     .setOrigin(0.5);
   const labelText = scene.add
-    .text(0, 18, label, {
+    .text(0, h * 0.24, label, {
       fontFamily: "Fredoka, sans-serif",
-      fontSize: "13px",
+      fontSize: font(13),
       color: "#5a3d4a",
       fontStyle: "600",
     })
@@ -36,30 +28,34 @@ export function makeButton(scene, x, y, w, h, fill, emoji, label, onClick) {
   container.emojiText = emojiText;
   container.labelText = labelText;
   container.setSize(w, h);
+
+  const hitW = w + px(16);
+  const hitH = h + px(16);
   container.setInteractive(
-    new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+    new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
     Phaser.Geom.Rectangle.Contains,
   );
 
-  container.on("pointerdown", () => {
+  const press = () => {
     scene.tweens.add({ targets: container, scale: 0.92, duration: 70 });
-  });
-  container.on("pointerup", () => {
+  };
+  const release = (fire) => {
     scene.tweens.add({ targets: container, scale: 1, duration: 90, ease: "Back.out" });
-    onClick();
-  });
+    if (fire) onClick();
+  };
+
+  container.on("pointerdown", press);
+  container.on("pointerup", () => release(true));
+  container.on("pointerupoutside", () => release(false));
   container.on("pointerout", () => {
     scene.tweens.add({ targets: container, scale: 1, duration: 90 });
   });
-
-  container.setEnabled = (enabled) => {
-    container.setAlpha(enabled ? 1 : 0.45);
-  };
 
   return container;
 }
 
 export function makePill(scene, x, y, w, h, fill, text, onClick) {
+  const { font, px } = view(scene);
   const container = scene.add.container(x, y);
   const shadow = scene.add.graphics();
   shadow.fillStyle(0x5a3d4a, 0.14);
@@ -72,7 +68,7 @@ export function makePill(scene, x, y, w, h, fill, text, onClick) {
   const label = scene.add
     .text(0, 0, text, {
       fontFamily: "Fredoka, sans-serif",
-      fontSize: "22px",
+      fontSize: font(22),
       color: "#5a3d4a",
       fontStyle: "700",
     })
@@ -81,7 +77,7 @@ export function makePill(scene, x, y, w, h, fill, text, onClick) {
   container.add([shadow, bg, label]);
   container.setSize(w, h);
   container.setInteractive(
-    new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+    new Phaser.Geom.Rectangle(-w / 2 - px(8), -h / 2 - px(8), w + px(16), h + px(16)),
     Phaser.Geom.Rectangle.Contains,
   );
   container.on("pointerdown", () => {
@@ -101,11 +97,13 @@ export function makePill(scene, x, y, w, h, fill, text, onClick) {
 export function toast(scene, message) {
   const existing = scene.children.getByName("toast");
   if (existing) existing.destroy();
+  const { w, safe, font } = view(scene);
+  const y = safe.top + 158;
 
   const t = scene.add
-    .text(W / 2, 168, message, {
+    .text(w / 2, y + 10, message, {
       fontFamily: "Fredoka, sans-serif",
-      fontSize: "18px",
+      fontSize: font(18),
       color: "#5a3d4a",
       backgroundColor: "#fff7fb",
       padding: { x: 16, y: 8 },
@@ -119,7 +117,7 @@ export function toast(scene, message) {
   scene.tweens.add({
     targets: t,
     alpha: 1,
-    y: 158,
+    y,
     duration: 180,
     yoyo: true,
     hold: 1100,
