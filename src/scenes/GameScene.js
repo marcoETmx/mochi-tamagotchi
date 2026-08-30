@@ -64,7 +64,7 @@ export class GameScene extends Phaser.Scene {
     this.pet = new Pet(this, cx, petY, this.state.species);
     this.pet.setDisplayScale(petScale);
     this.pet.setInteractive(
-      new Phaser.Geom.Ellipse(0, 10, 200, 210),
+      new Phaser.Geom.Ellipse(this.pet.width / 2, this.pet.height / 2 + 10, 200, 210),
       Phaser.Geom.Ellipse.Contains,
     );
     this.pet.on("pointerup", () => this.onBoop());
@@ -217,17 +217,31 @@ export class GameScene extends Phaser.Scene {
       { emoji: "🌙", label: "Dormir", color: 0xe4d7ff, fn: () => this.doSleep() },
     ];
 
-    const gap = 8 * u;
+    const gap = 10 * u;
     const side = Math.max(safe.left, safe.right, 16 * u);
     const available = w - side * 2;
     const bw = Math.min(84 * u, (available - gap * (specs.length - 1)) / specs.length);
     const bh = Math.max(78 * u, Math.min(92 * u, h * 0.1));
     const start = side + bw / 2;
     const y = h - safe.bottom - bh / 2 - 36 * u;
+    const padX = Math.max(0, gap / 2 - 1);
 
-    this.actionButtons = specs.map((spec, i) =>
-      makeButton(this, start + i * (bw + gap), y, bw, bh, spec.color, spec.emoji, spec.label, spec.fn),
-    );
+    this.actionButtons = specs.map((spec, i) => {
+      const button = makeButton(
+        this,
+        start + i * (bw + gap),
+        y,
+        bw,
+        bh,
+        spec.color,
+        spec.emoji,
+        spec.label,
+        spec.fn,
+        { padX, padY: 8 * u },
+      );
+      button.setDepth(30);
+      return button;
+    });
 
     this.hint = this.add
       .text(w / 2, h - safe.bottom - 10 * u, `Toca a ${this.state.name} para hacerle mimos`, {

@@ -1,7 +1,19 @@
 import Phaser from "phaser";
+import { containerHitBox } from "./hitArea.js";
 import { view } from "./viewport.js";
 
-export function makeButton(scene, x, y, w, h, fill, emoji, label, onClick) {
+export function containerHitRect(width, height, padX = 0, padY = padX) {
+  const box = containerHitBox(width, height, padX, padY);
+  return new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height);
+}
+
+export function enableContainerInput(container, width, height, padX = 0, padY = padX) {
+  container.setSize(width, height);
+  container.setInteractive(containerHitRect(width, height, padX, padY), Phaser.Geom.Rectangle.Contains);
+  return container;
+}
+
+export function makeButton(scene, x, y, w, h, fill, emoji, label, onClick, pads = {}) {
   const { font, px } = view(scene);
   const container = scene.add.container(x, y);
   const shadow = scene.add.graphics();
@@ -27,14 +39,7 @@ export function makeButton(scene, x, y, w, h, fill, emoji, label, onClick) {
   container.add([shadow, bg, emojiText, labelText]);
   container.emojiText = emojiText;
   container.labelText = labelText;
-  container.setSize(w, h);
-
-  const hitW = w + px(16);
-  const hitH = h + px(16);
-  container.setInteractive(
-    new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
-    Phaser.Geom.Rectangle.Contains,
-  );
+  enableContainerInput(container, w, h, pads.padX ?? 0, pads.padY ?? px(8));
 
   const press = () => {
     scene.tweens.add({ targets: container, scale: 0.92, duration: 70 });
@@ -75,11 +80,7 @@ export function makePill(scene, x, y, w, h, fill, text, onClick) {
     .setOrigin(0.5);
 
   container.add([shadow, bg, label]);
-  container.setSize(w, h);
-  container.setInteractive(
-    new Phaser.Geom.Rectangle(-w / 2 - px(8), -h / 2 - px(8), w + px(16), h + px(16)),
-    Phaser.Geom.Rectangle.Contains,
-  );
+  enableContainerInput(container, w, h, px(8), px(8));
   let armed = false;
   container.on("pointerdown", () => {
     armed = true;

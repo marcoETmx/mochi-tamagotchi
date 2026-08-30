@@ -3,7 +3,7 @@ import { Pet } from "../objects/Pet.js";
 import { createDefaultState } from "../petState.js";
 import { SPECIES_LIST, sanitizeName } from "../species.js";
 import { saveState } from "../storage.js";
-import { makePill, toast } from "../ui.js";
+import { enableContainerInput, makePill, toast } from "../ui.js";
 import { sfxDeny, sfxTap } from "../sfx.js";
 import { view } from "../viewport.js";
 import { mountNameField, isNameInputFocused } from "../nameInput.js";
@@ -116,11 +116,7 @@ export class SetupScene extends Phaser.Scene {
     bg.fillStyle(0xfff7fb, 1);
     bg.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
     container.add([shadow, bg]);
-    container.setSize(w, h);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    enableContainerInput(container, w, h);
     container.on("pointerup", () => this.nameInput?.focus());
     return container;
   }
