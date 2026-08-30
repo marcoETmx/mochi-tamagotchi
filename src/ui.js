@@ -81,12 +81,20 @@ export function makePill(scene, x, y, w, h, fill, text, onClick) {
 
   container.add([shadow, bg, label]);
   enableContainerInput(container, w, h, px(8), px(8));
+  let armed = false;
   container.on("pointerdown", () => {
+    armed = true;
     scene.tweens.add({ targets: container, scale: 0.96, duration: 70 });
   });
   container.on("pointerup", () => {
     scene.tweens.add({ targets: container, scale: 1, duration: 90, ease: "Back.out" });
+    if (!armed) return;
+    armed = false;
     onClick();
+  });
+  container.on("pointerupoutside", () => {
+    armed = false;
+    scene.tweens.add({ targets: container, scale: 1, duration: 90 });
   });
   container.on("pointerout", () => {
     scene.tweens.add({ targets: container, scale: 1, duration: 90 });

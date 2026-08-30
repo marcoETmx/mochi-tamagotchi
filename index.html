@@ -51,8 +51,107 @@
         height: 100dvh;
       }
 
+      #game {
+        z-index: 0;
+      }
+
       canvas {
         display: block;
+      }
+
+      .pet-name-field,
+      #game .pet-name-field {
+        position: absolute;
+        z-index: 8;
+        box-sizing: border-box;
+        margin: 0;
+        border: 0;
+        border-radius: 999px;
+        background: #fff7fb;
+        color: #5a3d4a;
+        font-family: Fredoka, sans-serif;
+        font-size: 20px;
+        font-weight: 600;
+        text-align: center;
+        box-shadow: 0 4px 0 rgba(90, 61, 74, 0.12);
+        outline: none;
+        caret-color: #ff8fab;
+        touch-action: manipulation;
+        user-select: text;
+        -webkit-user-select: text;
+      }
+
+      .pet-name-field::placeholder {
+        color: #c97b9a;
+        font-weight: 600;
+      }
+
+      .pet-name-field:focus {
+        box-shadow: 0 0 0 4px rgba(255, 143, 171, 0.35), 0 4px 0 rgba(90, 61, 74, 0.12);
+      }
+
+      .name-modal {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(61, 44, 58, 0.42);
+        padding: 24px;
+        touch-action: manipulation;
+      }
+
+      .name-modal-card {
+        width: min(320px, 100%);
+        background: #fff7fb;
+        border-radius: 28px;
+        padding: 24px 20px 20px;
+        box-shadow: 0 12px 0 rgba(90, 61, 74, 0.12);
+      }
+
+      .name-modal-title {
+        margin: 0 0 16px;
+        text-align: center;
+        font-family: Fredoka, sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        color: #5a3d4a;
+      }
+
+      .name-modal-input {
+        position: relative;
+        width: 100%;
+        height: 56px;
+        left: auto;
+        top: auto;
+      }
+
+      .name-modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .name-modal-actions button {
+        flex: 1;
+        height: 48px;
+        border: 0;
+        border-radius: 999px;
+        font-family: Fredoka, sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .name-modal-cancel {
+        background: #f3d6e2;
+        color: #8a6574;
+      }
+
+      .name-modal-ok {
+        background: #ffd1dc;
+        color: #5a3d4a;
       }
     </style>
   </head>
