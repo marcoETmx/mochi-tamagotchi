@@ -3,8 +3,9 @@ import { Pet } from "../objects/Pet.js";
 import { createDefaultState } from "../petState.js";
 import { SPECIES_LIST, sanitizeName } from "../species.js";
 import { saveState } from "../storage.js";
-import { H, W, makePill } from "../ui.js";
+import { makePill } from "../ui.js";
 import { sfxTap } from "../sfx.js";
+import { view } from "../viewport.js";
 
 export class SetupScene extends Phaser.Scene {
   constructor() {
@@ -15,44 +16,56 @@ export class SetupScene extends Phaser.Scene {
     this.petName = "";
     this.species = null;
 
-    this.add.image(W / 2, H / 2, "sky");
-    this.drawDecor();
+    const { w, h, cx, safe, u, font } = view(this);
+    this.layoutW = w;
+    this.layoutH = h;
+    this.events.once("shutdown", () => this.scale.off("resize", this.handleResize, this));
+    this.scale.on("resize", this.handleResize, this);
+
+    this.add.image(cx, h / 2, "sky").setDisplaySize(w, h);
+    this.drawDecor(w, h, u);
 
     this.add
-      .text(W / 2, 72, "Nueva mascota", {
+      .text(cx, safe.top + 40 * u, "Nueva mascota", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "34px",
+        fontSize: font(34),
         color: "#5a3d4a",
         fontStyle: "700",
       })
       .setOrigin(0.5);
 
     this.add
-      .text(W / 2, 118, "¿Cómo se llama tu mascota?", {
+      .text(cx, safe.top + 86 * u, "¿Cómo se llama tu mascota?", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "18px",
+        fontSize: font(18),
         color: "#c97b9a",
         fontStyle: "500",
       })
       .setOrigin(0.5);
 
-    this.nameField = this.makeNameField(W / 2, 176);
+    const fieldW = Math.min(280 * u, w - 48 * u);
+    this.nameField = this.makeNameField(cx, safe.top + 140 * u, fieldW, 56 * u, font);
 
     this.add
-      .text(W / 2, 248, "Elige tu mascota", {
+      .text(cx, safe.top + 198 * u, "Elige tu mascota", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "18px",
+        fontSize: font(18),
         color: "#c97b9a",
         fontStyle: "500",
       })
       .setOrigin(0.5);
 
+    const cardW = Math.min(168 * u, (w - 56 * u) / 2);
+    const cardH = Math.min(300 * u, h * 0.4);
+    const gap = 16 * u;
+    const cardsY = safe.top + 198 * u + 28 * u + cardH / 2;
     this.cards = SPECIES_LIST.map((spec, i) => {
-      const x = i === 0 ? 108 : 282;
-      return this.makeSpeciesCard(x, 460, spec.id);
+      const x = i === 0 ? cx - cardW / 2 - gap / 2 : cx + cardW / 2 + gap / 2;
+      return this.makeSpeciesCard(x, cardsY, spec.id, cardW, cardH, font, u);
     });
 
-    this.startBtn = makePill(this, W / 2, 730, 240, 64, 0xffd1dc, "¡Empezar! 🌸", () => {
+    const btnW = Math.min(280 * u, w - 48 * u);
+    this.startBtn = makePill(this, cx, h - safe.bottom - 56 * u, btnW, 64 * u, 0xffd1dc, "¡Empezar! 🌸", () => {
       if (!this.canStart()) return;
       sfxTap();
       const state = createDefaultState(this.petName, this.species);
@@ -63,9 +76,14 @@ export class SetupScene extends Phaser.Scene {
     this.refreshStart();
   }
 
-  makeNameField(x, y) {
-    const w = 280;
-    const h = 56;
+  handleResize(gameSize) {
+    if (Math.abs(gameSize.width - this.layoutW) < 12 && Math.abs(gameSize.height - this.layoutH) < 12) {
+      return;
+    }
+    this.scene.restart();
+  }
+
+  makeNameField(x, y, w, h, font) {
     const container = this.add.container(x, y);
     const shadow = this.add.graphics();
     shadow.fillStyle(0x5a3d4a, 0.12);
@@ -78,7 +96,7 @@ export class SetupScene extends Phaser.Scene {
     const label = this.add
       .text(0, 0, "Toca para escribir...", {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "20px",
+        fontSize: font(20),
         color: "#c97b9a",
         fontStyle: "600",
       })
@@ -95,31 +113,29 @@ export class SetupScene extends Phaser.Scene {
     return container;
   }
 
-  makeSpeciesCard(x, y, speciesId) {
-    const w = 156;
-    const h = 280;
+  makeSpeciesCard(x, y, speciesId, w, h, font, u) {
     const container = this.add.container(x, y);
 
     const shadow = this.add.graphics();
     shadow.fillStyle(0x5a3d4a, 0.12);
-    shadow.fillRoundedRect(-w / 2 + 2, -h / 2 + 6, w, h, 24);
+    shadow.fillRoundedRect(-w / 2 + 2, -h / 2 + 6, w, h, 24 * u);
 
     const bg = this.add.graphics();
     bg.fillStyle(0xfff7fb, 1);
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 24);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 24 * u);
 
     const ring = this.add.graphics();
     const pet = new Pet(this, 0, 0, speciesId);
     pet.setMood("happy");
-    const wrap = this.add.container(0, -8);
+    const wrap = this.add.container(0, -10 * u);
     wrap.add(pet);
-    wrap.setScale(0.56);
+    wrap.setScale(Phaser.Math.Clamp(Math.min(w, h) / 380, 0.42, 0.9));
 
     const spec = SPECIES_LIST.find((item) => item.id === speciesId);
     const label = this.add
-      .text(0, 112, spec.label, {
+      .text(0, h / 2 - 28 * u, spec.label, {
         fontFamily: "Fredoka, sans-serif",
-        fontSize: "18px",
+        fontSize: font(18),
         color: "#5a3d4a",
         fontStyle: "700",
       })
@@ -140,6 +156,7 @@ export class SetupScene extends Phaser.Scene {
     container.speciesId = speciesId;
     container.cardW = w;
     container.cardH = h;
+    container.radius = 22 * u;
     return container;
   }
 
@@ -169,7 +186,7 @@ export class SetupScene extends Phaser.Scene {
           -card.cardH / 2 + 2,
           card.cardW - 4,
           card.cardH - 4,
-          22,
+          card.radius,
         );
       }
       this.tweens.add({
@@ -191,16 +208,16 @@ export class SetupScene extends Phaser.Scene {
     this.startBtn.setAlpha(ready ? 1 : 0.45);
   }
 
-  drawDecor() {
+  drawDecor(w, h, u) {
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 0.55);
-    g.fillEllipse(70, 230, 90, 48);
-    g.fillEllipse(110, 230, 70, 40);
-    g.fillEllipse(300, 210, 100, 52);
-    g.fillEllipse(340, 214, 64, 36);
+    g.fillEllipse(w * 0.18, h * 0.27, 90 * u, 48 * u);
+    g.fillEllipse(w * 0.28, h * 0.27, 70 * u, 40 * u);
+    g.fillEllipse(w * 0.78, h * 0.25, 100 * u, 52 * u);
+    g.fillEllipse(w * 0.88, h * 0.255, 64 * u, 36 * u);
     g.fillStyle(0xfff0c2, 1);
-    g.fillCircle(48, 96, 24);
+    g.fillCircle(w * 0.12, h * 0.11, 24 * u);
     g.fillStyle(0xffe08a, 0.35);
-    g.fillCircle(48, 96, 38);
+    g.fillCircle(w * 0.12, h * 0.11, 38 * u);
   }
 }

@@ -7,6 +7,7 @@ export class Pet extends Phaser.GameObjects.Container {
   constructor(scene, x, y, species = "tlacuache") {
     super(scene, x, y);
     scene.add.existing(this);
+    this.displayScale = 1;
     this.mood = "happy";
     this.species = normalizeSpecies(species);
     this.blinkUntil = 0;
@@ -81,12 +82,19 @@ export class Pet extends Phaser.GameObjects.Container {
     this.body.setTexture(this.mood === "sick" ? spec.sickKey : spec.bodyKey);
   }
 
+  setDisplayScale(scale) {
+    this.displayScale = scale;
+    this.setScale(scale);
+    this.startIdle();
+  }
+
   startIdle() {
     this.idleTween?.stop();
+    const s = this.displayScale;
     this.idleTween = this.scene.tweens.add({
       targets: this,
-      scaleY: 1.035,
-      scaleX: 0.985,
+      scaleY: s * 1.035,
+      scaleX: s * 0.985,
       yoyo: true,
       duration: this.mood === "sleep" ? 1400 : 900,
       repeat: -1,
@@ -290,10 +298,11 @@ export class Pet extends Phaser.GameObjects.Container {
   }
 
   squash() {
+    const s = this.displayScale;
     this.scene.tweens.add({
       targets: this,
-      scaleX: 1.12,
-      scaleY: 0.88,
+      scaleX: s * 1.12,
+      scaleY: s * 0.88,
       duration: 90,
       yoyo: true,
       ease: "Sine.out",

@@ -3,35 +3,64 @@ import { BootScene } from "./scenes/BootScene.js";
 import { TitleScene } from "./scenes/TitleScene.js";
 import { SetupScene } from "./scenes/SetupScene.js";
 import { GameScene } from "./scenes/GameScene.js";
-import { H, W } from "./ui.js";
-
-const config = {
-  type: Phaser.AUTO,
-  parent: "game",
-  width: W,
-  height: H,
-  backgroundColor: "#ffd6ec",
-  antialias: true,
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  input: {
-    activePointers: 3,
-  },
-  scene: [BootScene, TitleScene, SetupScene, GameScene],
-};
-
-document.addEventListener(
-  "touchmove",
-  (event) => {
-    event.preventDefault();
-  },
-  { passive: false },
-);
+import { cssSize, dpr } from "./viewport.js";
 
 function start() {
-  globalThis.game = new Phaser.Game(config);
+  const ratio = dpr();
+  const size = cssSize();
+
+  const config = {
+    type: Phaser.AUTO,
+    parent: "game",
+    width: Math.round(size.width * ratio),
+    height: Math.round(size.height * ratio),
+    zoom: 1 / ratio,
+    backgroundColor: "#ffd6ec",
+    antialias: true,
+    scale: {
+      mode: Phaser.Scale.NONE,
+      parent: "game",
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      expandParent: true,
+      autoRound: true,
+    },
+    render: {
+      antialias: true,
+      pixelArt: false,
+      roundPixels: false,
+      powerPreference: "high-performance",
+    },
+    input: {
+      activePointers: 3,
+    },
+    scene: [BootScene, TitleScene, SetupScene, GameScene],
+  };
+
+  const game = new Phaser.Game(config);
+  globalThis.game = game;
+
+  const refresh = () => {
+    const next = cssSize();
+    const pixelRatio = dpr();
+    const width = Math.round(next.width * pixelRatio);
+    const height = Math.round(next.height * pixelRatio);
+    game.scale.setZoom(1 / pixelRatio);
+    if (Math.abs(game.scale.width - width) > 2 || Math.abs(game.scale.height - height) > 2) {
+      game.scale.resize(width, height);
+    }
+  };
+
+  window.addEventListener("resize", refresh);
+  window.addEventListener("orientationchange", () => setTimeout(refresh, 200));
+  window.visualViewport?.addEventListener("resize", refresh);
+
+  game.canvas.addEventListener(
+    "touchmove",
+    (event) => {
+      event.preventDefault();
+    },
+    { passive: false },
+  );
 }
 
 if (document.fonts?.ready) {
