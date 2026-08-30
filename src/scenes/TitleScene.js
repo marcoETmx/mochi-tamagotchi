@@ -97,9 +97,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   handleResize(gameSize) {
-    if (Math.abs(gameSize.width - this.layoutW) < 12 && Math.abs(gameSize.height - this.layoutH) < 12) {
-      return;
-    }
+    if (Math.abs(gameSize.width - this.layoutW) < 12) return;
     this.scene.restart();
   }
 

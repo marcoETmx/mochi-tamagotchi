@@ -3,18 +3,21 @@ import { Pet } from "../objects/Pet.js";
 import { createDefaultState } from "../petState.js";
 import { SPECIES_LIST, sanitizeName } from "../species.js";
 import { saveState } from "../storage.js";
-import { makePill } from "../ui.js";
-import { sfxTap } from "../sfx.js";
+import { makePill, toast } from "../ui.js";
+import { sfxDeny, sfxTap } from "../sfx.js";
 import { view } from "../viewport.js";
+import { mountNameField } from "../nameInput.js";
 
 export class SetupScene extends Phaser.Scene {
+  static draft = { name: "", species: null };
+
   constructor() {
     super("setup");
   }
 
   create() {
-    this.petName = "";
-    this.species = null;
+    this.petName = SetupScene.draft.name || "";
+    this.species = SetupScene.draft.species || null;
 
     const { w, h, cx, safe, u, font } = view(this);
     this.layoutW = w;
@@ -26,7 +29,7 @@ export class SetupScene extends Phaser.Scene {
     this.drawDecor(w, h, u);
 
     this.add
-      .text(cx, safe.top + 40 * u, "Nueva mascota", {
+      .text(cx, safe.top + 36 * u, "Nueva mascota", {
         fontFamily: "Fredoka, sans-serif",
         fontSize: font(34),
         color: "#5a3d4a",
@@ -35,7 +38,7 @@ export class SetupScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(cx, safe.top + 86 * u, "¿Cómo se llama tu mascota?", {
+      .text(cx, safe.top + 80 * u, "¿Cómo se llama tu mascota?", {
         fontFamily: "Fredoka, sans-serif",
         fontSize: font(18),
         color: "#c97b9a",
@@ -44,10 +47,21 @@ export class SetupScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const fieldW = Math.min(280 * u, w - 48 * u);
-    this.nameField = this.makeNameField(cx, safe.top + 140 * u, fieldW, 56 * u, font);
+    const fieldH = 56 * u;
+    const fieldY = safe.top + 132 * u;
+    this.nameField = this.makeNameField(cx, fieldY, fieldW, fieldH);
+    this.nameInput = mountNameField(this, {
+      x: cx,
+      y: fieldY,
+      w: fieldW,
+      h: fieldH,
+      value: this.petName,
+      placeholder: "Toca para escribir...",
+      onChange: (raw) => this.setName(raw),
+    });
 
     this.add
-      .text(cx, safe.top + 198 * u, "Elige tu mascota", {
+      .text(cx, fieldY + fieldH / 2 + 28 * u, "Elige tu mascota", {
         fontFamily: "Fredoka, sans-serif",
         fontSize: font(18),
         color: "#c97b9a",
@@ -55,61 +69,58 @@ export class SetupScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    const btnH = 64 * u;
+    const btnY = h - safe.bottom - btnH / 2 - 16 * u;
+    const chooseTop = fieldY + fieldH / 2 + 52 * u;
+    const cardsBottom = btnY - btnH / 2 - 18 * u;
     const cardW = Math.min(168 * u, (w - 56 * u) / 2);
-    const cardH = Math.min(300 * u, h * 0.4);
+    const cardH = Math.max(160 * u, Math.min(cardsBottom - chooseTop, 280 * u));
     const gap = 16 * u;
-    const cardsY = safe.top + 198 * u + 28 * u + cardH / 2;
+    const cardsY = chooseTop + cardH / 2;
+
     this.cards = SPECIES_LIST.map((spec, i) => {
       const x = i === 0 ? cx - cardW / 2 - gap / 2 : cx + cardW / 2 + gap / 2;
       return this.makeSpeciesCard(x, cardsY, spec.id, cardW, cardH, font, u);
     });
 
     const btnW = Math.min(280 * u, w - 48 * u);
-    this.startBtn = makePill(this, cx, h - safe.bottom - 56 * u, btnW, 64 * u, 0xffd1dc, "¡Empezar! 🌸", () => {
-      if (!this.canStart()) return;
+    this.startBtn = makePill(this, cx, btnY, btnW, btnH, 0xffd1dc, "¡Empezar! 🌸", () => {
+      if (!this.canStart()) {
+        sfxDeny();
+        toast(this, !this.petName ? "Ponle un nombre ✍️" : "Elige tu mascota 💕");
+        return;
+      }
       sfxTap();
       const state = createDefaultState(this.petName, this.species);
       saveState(state);
+      SetupScene.draft = { name: "", species: null };
       this.scene.start("game");
     });
 
+    if (this.species) this.pickSpecies(this.species);
     this.refreshStart();
   }
 
   handleResize(gameSize) {
-    if (Math.abs(gameSize.width - this.layoutW) < 12 && Math.abs(gameSize.height - this.layoutH) < 12) {
-      return;
-    }
+    if (Math.abs(gameSize.width - this.layoutW) < 12) return;
     this.scene.restart();
   }
 
-  makeNameField(x, y, w, h, font) {
+  makeNameField(x, y, w, h) {
     const container = this.add.container(x, y);
     const shadow = this.add.graphics();
     shadow.fillStyle(0x5a3d4a, 0.12);
     shadow.fillRoundedRect(-w / 2 + 1, -h / 2 + 4, w, h, h / 2);
-
     const bg = this.add.graphics();
     bg.fillStyle(0xfff7fb, 1);
     bg.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
-
-    const label = this.add
-      .text(0, 0, "Toca para escribir...", {
-        fontFamily: "Fredoka, sans-serif",
-        fontSize: font(20),
-        color: "#c97b9a",
-        fontStyle: "600",
-      })
-      .setOrigin(0.5);
-
-    container.add([shadow, bg, label]);
+    container.add([shadow, bg]);
     container.setSize(w, h);
     container.setInteractive(
       new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
       Phaser.Geom.Rectangle.Contains,
     );
-    container.on("pointerup", () => this.askName());
-    container.label = label;
+    container.on("pointerup", () => this.nameInput?.focus());
     return container;
   }
 
@@ -127,9 +138,10 @@ export class SetupScene extends Phaser.Scene {
     const ring = this.add.graphics();
     const pet = new Pet(this, 0, 0, speciesId);
     pet.setMood("happy");
-    const wrap = this.add.container(0, -10 * u);
+    pet.disableInteractive();
+    const wrap = this.add.container(0, -12 * u);
     wrap.add(pet);
-    wrap.setScale(Phaser.Math.Clamp(Math.min(w, h) / 380, 0.42, 0.9));
+    wrap.setScale(Phaser.Math.Clamp(Math.min(w, h * 0.7) / 380, 0.38, 0.85));
 
     const spec = SPECIES_LIST.find((item) => item.id === speciesId);
     const label = this.add
@@ -141,18 +153,26 @@ export class SetupScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    container.add([shadow, bg, ring, wrap, label]);
-    container.setSize(w, h);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    container.on("pointerup", () => {
+    const hit = this.add.zone(0, 0, w, h);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on("pointerdown", () => {
+      this.tweens.add({ targets: container, scale: 0.96, duration: 70 });
+    });
+    hit.on("pointerup", () => {
+      this.tweens.add({ targets: container, scale: 1.04, duration: 90, ease: "Back.out" });
       sfxTap();
       this.pickSpecies(speciesId);
     });
+    hit.on("pointerout", () => {
+      const selected = this.species === speciesId;
+      this.tweens.add({ targets: container, scale: selected ? 1.04 : 1, duration: 90 });
+    });
+
+    container.add([shadow, bg, ring, wrap, label, hit]);
+    container.setSize(w, h);
 
     container.ring = ring;
+    container.bg = bg;
     container.speciesId = speciesId;
     container.cardW = w;
     container.cardH = h;
@@ -160,32 +180,34 @@ export class SetupScene extends Phaser.Scene {
     return container;
   }
 
-  askName() {
-    const next = window.prompt("¿Cómo se llama tu mascota?", this.petName);
-    if (next == null) return;
-    this.petName = sanitizeName(next);
-    if (this.petName) {
-      this.nameField.label.setText(this.petName);
-      this.nameField.label.setColor("#5a3d4a");
-    } else {
-      this.nameField.label.setText("Toca para escribir...");
-      this.nameField.label.setColor("#c97b9a");
-    }
+  setName(raw) {
+    this.petName = sanitizeName(raw);
+    SetupScene.draft.name = this.petName;
     this.refreshStart();
   }
 
   pickSpecies(speciesId) {
     this.species = speciesId;
+    SetupScene.draft.species = speciesId;
     for (const card of this.cards) {
       const selected = card.speciesId === speciesId;
+      card.bg.clear();
+      card.bg.fillStyle(selected ? 0xffe4ef : 0xfff7fb, 1);
+      card.bg.fillRoundedRect(
+        -card.cardW / 2,
+        -card.cardH / 2,
+        card.cardW,
+        card.cardH,
+        card.radius,
+      );
       card.ring.clear();
       if (selected) {
-        card.ring.lineStyle(5, 0xff8fab, 1);
+        card.ring.lineStyle(6, 0xff8fab, 1);
         card.ring.strokeRoundedRect(
-          -card.cardW / 2 + 2,
-          -card.cardH / 2 + 2,
-          card.cardW - 4,
-          card.cardH - 4,
+          -card.cardW / 2 + 3,
+          -card.cardH / 2 + 3,
+          card.cardW - 6,
+          card.cardH - 6,
           card.radius,
         );
       }
