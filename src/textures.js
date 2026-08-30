@@ -6,6 +6,18 @@ function canvasTexture(scene, key, width, height, draw) {
   return texture;
 }
 
+function fillRoundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+  ctx.fill();
+}
+
 function drawBlobBody(ctx, s, [light, mid, dark]) {
   const k = s / 256;
   const g = ctx.createRadialGradient(s * 0.38, s * 0.34, 16 * k, s * 0.5, s * 0.52, s * 0.46);
@@ -173,5 +185,105 @@ export function createTextures(scene) {
     ctx.beginPath();
     ctx.arc(7, 7, 1.6, 0, Math.PI * 2);
     ctx.fill();
+  });
+
+  canvasTexture(scene, "cookie", 64, 64, (ctx) => {
+    const g = ctx.createRadialGradient(24, 22, 6, 32, 34, 28);
+    g.addColorStop(0, "#f3d5a6");
+    g.addColorStop(0.7, "#d9a066");
+    g.addColorStop(1, "#b87a3c");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(32, 32, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#6b3e26";
+    for (const [x, y, r] of [
+      [22, 24, 3.2],
+      [38, 20, 2.6],
+      [40, 36, 3],
+      [26, 40, 2.4],
+      [32, 28, 2.2],
+    ]) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  canvasTexture(scene, "crumb", 12, 12, (ctx) => {
+    ctx.fillStyle = "#c48a4a";
+    ctx.beginPath();
+    ctx.arc(6, 6, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  canvasTexture(scene, "ball", 48, 48, (ctx) => {
+    const g = ctx.createRadialGradient(16, 14, 4, 24, 26, 22);
+    g.addColorStop(0, "#e8ff7a");
+    g.addColorStop(1, "#9ccc12");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(24, 24, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#f7fff0";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(8, 24, 16, -0.7, 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(40, 24, 16, Math.PI - 0.7, Math.PI + 0.7);
+    ctx.stroke();
+  });
+
+  canvasTexture(scene, "pill", 48, 28, (ctx) => {
+    ctx.fillStyle = "#ff8fab";
+    fillRoundRect(ctx, 2, 4, 22, 20, 10);
+    ctx.fillStyle = "#fff7fb";
+    fillRoundRect(ctx, 24, 4, 22, 20, 10);
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillRect(22, 6, 4, 16);
+  });
+
+  canvasTexture(scene, "soap", 48, 32, (ctx) => {
+    const g = ctx.createLinearGradient(0, 0, 0, 32);
+    g.addColorStop(0, "#ffe3f0");
+    g.addColorStop(1, "#ff9ec0");
+    ctx.fillStyle = g;
+    fillRoundRect(ctx, 4, 6, 40, 20, 10);
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.beginPath();
+    ctx.ellipse(16, 12, 8, 3, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  canvasTexture(scene, "duck", 56, 52, (ctx) => {
+    ctx.fillStyle = "#ffe066";
+    ctx.beginPath();
+    ctx.ellipse(28, 32, 18, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(36, 16, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ff9f43";
+    ctx.beginPath();
+    ctx.moveTo(44, 16);
+    ctx.lineTo(54, 18);
+    ctx.lineTo(44, 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#3d2c3a";
+    ctx.beginPath();
+    ctx.arc(38, 14, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ff8fab";
+    ctx.beginPath();
+    ctx.ellipse(22, 34, 5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  canvasTexture(scene, "plus", 24, 24, (ctx) => {
+    ctx.fillStyle = "#66bb6a";
+    ctx.fillRect(9, 3, 6, 18);
+    ctx.fillRect(3, 9, 18, 6);
   });
 }
