@@ -13,6 +13,7 @@ import {
   play,
   toggleSleep,
 } from "../petState.js";
+import { sanitizeName } from "../species.js";
 import { clearState, loadState, saveState } from "../storage.js";
 import {
   isMuted,
@@ -43,7 +44,7 @@ export class GameScene extends Phaser.Scene {
     this.drawRoom();
 
     this.shadow = this.add.ellipse(W / 2, 478, 160, 34, 0x5a3d4a, 0.16);
-    this.pet = new Pet(this, W / 2, 390);
+    this.pet = new Pet(this, W / 2, 390, this.state.species);
     this.pet.setInteractive(
       new Phaser.Geom.Ellipse(0, 10, 180, 190),
       Phaser.Geom.Ellipse.Contains,
@@ -191,7 +192,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.hint = this.add
-      .text(W / 2, 800, "Toca a Mochi para hacerle mimos", {
+      .text(W / 2, 800, `Toca a ${this.state.name} para hacerle mimos`, {
         fontFamily: "Fredoka, sans-serif",
         fontSize: "14px",
         color: "#c97b9a",
@@ -229,11 +230,7 @@ export class GameScene extends Phaser.Scene {
     const again = makePill(this, W / 2, 470, 220, 58, 0xffd1dc, "Nueva mascota 🌸", () => {
       sfxTap();
       clearState();
-      this.state = createDefaultState();
-      saveState(this.state);
-      this.deathLayer.setVisible(false);
-      this.pet.clearDeadEyes();
-      this.refresh();
+      this.scene.start("setup");
     });
 
     this.deathLayer.add([veil, card, title, this.deathMsg, again]);
@@ -242,7 +239,7 @@ export class GameScene extends Phaser.Scene {
   rename() {
     const next = window.prompt("¿Cómo se llama tu mascota?", this.state.name);
     if (!next) return;
-    const name = next.trim().slice(0, 12);
+    const name = sanitizeName(next);
     if (!name) return;
     this.state.name = name;
     saveState(this.state);
@@ -276,7 +273,7 @@ export class GameScene extends Phaser.Scene {
     this.hint.setText(
       this.state.sleeping
         ? "Shhh... está soñando 💤"
-        : "Toca a Mochi para hacerle mimos",
+        : `Toca a ${this.state.name} para hacerle mimos`,
     );
   }
 

@@ -7,12 +7,30 @@ import {
   getMood,
   play,
 } from "./petState.js";
+import { normalizeSpecies, sanitizeName } from "./species.js";
 
 describe("petState", () => {
   it("starts happy and alive", () => {
     const state = createDefaultState();
     assert.equal(state.dead, false);
     assert.equal(getMood(state), "happy");
+    assert.equal(state.species, "tlacuache");
+  });
+
+  it("stores custom name and species", () => {
+    const state = createDefaultState("Luna", "borrego");
+    assert.equal(state.name, "Luna");
+    assert.equal(state.species, "borrego");
+  });
+
+  it("defaults unknown species to tlacuache", () => {
+    assert.equal(normalizeSpecies("gato"), "tlacuache");
+    assert.equal(createDefaultState("Luna", "gato").species, "tlacuache");
+  });
+
+  it("trims and caps names", () => {
+    assert.equal(sanitizeName("  Pepe  "), "Pepe");
+    assert.equal(sanitizeName("abcdefghijklmnop").length, 12);
   });
 
   it("feeding raises comida", () => {
