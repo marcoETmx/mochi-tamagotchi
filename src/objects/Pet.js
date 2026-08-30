@@ -391,13 +391,45 @@ export class Pet extends Phaser.GameObjects.Container {
     this.onActionDone = onDone || null;
     this.idleTween?.stop();
     this.armTween?.stop();
+    this.clearActionTimers();
+    this.scene.tweens.killTweensOf([
+      this,
+      this.cookie,
+      this.ball,
+      this.pill,
+      this.soap,
+      this.duck,
+      this.frontArm,
+      this.leftArm,
+      this.rightArm,
+      this.bathBack,
+      this.bathFront,
+    ]);
     this.setScale(this.displayScale);
     this.hideProps();
     this.drawBath(false);
     return true;
   }
 
+  clearActionTimers() {
+    for (const timer of this.actionTimers) timer.remove(false);
+    this.actionTimers = [];
+  }
+
   finishAction() {
+    this.clearActionTimers();
+    this.scene.tweens.killTweensOf([
+      this.cookie,
+      this.ball,
+      this.pill,
+      this.soap,
+      this.duck,
+      this.frontArm,
+      this.leftArm,
+      this.rightArm,
+      this.bathBack,
+      this.bathFront,
+    ]);
     this.hideProps();
     this.drawBath(false);
     this.frontArm.setVisible(false);
