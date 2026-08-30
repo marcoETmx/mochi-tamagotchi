@@ -1,92 +1,116 @@
-import { NAME_MAX, sanitizeName } from "./species.js";
+import { NAME_MAX } from "./species.js";
 
-let inputEl = null;
-let focused = false;
+function gameParent() {
+  return document.getElementById("game") || document.body;
+}
 
 export function isNameInputFocused() {
-  return focused;
+  const el = document.activeElement;
+  return Boolean(el && el.classList?.contains("pet-name-field"));
 }
 
-export function destroyNameInput() {
-  focused = false;
-  inputEl?.remove();
-  inputEl = null;
+function placeOver(el, scene, { x, y, w, h }) {
+  const canvas = scene.game.canvas.getBoundingClientRect();
+  const parent = el.offsetParent?.getBoundingClientRect?.() || gameParent().getBoundingClientRect();
+  const zoom = scene.scale.zoom;
+  el.style.left = `${canvas.left - parent.left + (x - w / 2) * zoom}px`;
+  el.style.top = `${canvas.top - parent.top + (y - h / 2) * zoom}px`;
+  el.style.width = `${w * zoom}px`;
+  el.style.height = `${h * zoom}px`;
 }
 
-function gameToPage(scene, gx, gy, gw, gh) {
-  const canvas = scene.game.canvas;
-  const rect = canvas.getBoundingClientRect();
-  const sx = rect.width / scene.scale.width;
-  const sy = rect.height / scene.scale.height;
+export function mountNameField(scene, { x, y, w, h, value, placeholder, onChange }) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "pet-name-field";
+  input.maxLength = NAME_MAX;
+  input.placeholder = placeholder || "Toca para escribir...";
+  input.value = value || "";
+  input.autocomplete = "off";
+  input.autocapitalize = "words";
+  input.spellcheck = false;
+  input.enterKeyHint = "done";
+  input.setAttribute("aria-label", "Nombre de tu mascota");
+
+  gameParent().appendChild(input);
+  placeOver(input, scene, { x, y, w, h });
+
+  const emit = () => onChange?.(input.value);
+
+  input.addEventListener("input", emit);
+  input.addEventListener("change", emit);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      input.blur();
+    }
+  });
+
+  const onResize = () => placeOver(input, scene, { x, y, w, h });
+  window.addEventListener("resize", onResize);
+  window.visualViewport?.addEventListener("resize", onResize);
+
+  const destroy = () => {
+    window.removeEventListener("resize", onResize);
+    window.visualViewport?.removeEventListener("resize", onResize);
+    input.remove();
+  };
+  scene.events.once("shutdown", destroy);
+  scene.events.once("destroy", destroy);
+
   return {
-    left: rect.left + (gx - gw / 2) * sx,
-    top: rect.top + (gy - gh / 2) * sy,
-    width: gw * sx,
-    height: gh * sy,
+    el: input,
+    focus: () => input.focus(),
+    setValue: (next) => {
+      input.value = next;
+    },
+    destroy,
   };
 }
 
-export function mountNameInput(scene, { x, y, w, h, value, onChange }) {
-  destroyNameInput();
+export function openNameModal({ title, value, confirmLabel, onSubmit, onCancel }) {
+  const root = document.createElement("div");
+  root.className = "name-modal";
+  root.innerHTML = `
+    <form class="name-modal-card">
+      <p class="name-modal-title"></p>
+      <input class="pet-name-field name-modal-input" type="text" maxlength="${NAME_MAX}" autocomplete="off" spellcheck="false" enterkeyhint="done" />
+      <div class="name-modal-actions">
+        <button type="button" class="name-modal-cancel">Cancelar</button>
+        <button type="submit" class="name-modal-ok"></button>
+      </div>
+    </form>
+  `;
 
-  const el = document.createElement("input");
-  el.type = "text";
-  el.maxLength = NAME_MAX;
-  el.placeholder = "Nombre";
-  el.value = value || "";
-  el.autocomplete = "off";
-  el.autocapitalize = "words";
-  el.spellcheck = false;
-  el.enterKeyHint = "done";
-  el.setAttribute("inputmode", "text");
-  el.id = "mochi-name-input";
+  const titleEl = root.querySelector(".name-modal-title");
+  const input = root.querySelector("input");
+  const ok = root.querySelector(".name-modal-ok");
+  const cancel = root.querySelector(".name-modal-cancel");
+  const form = root.querySelector("form");
 
-  const place = () => {
-    const box = gameToPage(scene, x, y, w, h);
-    el.style.left = `${box.left}px`;
-    el.style.top = `${box.top}px`;
-    el.style.width = `${box.width}px`;
-    el.style.height = `${box.height}px`;
-    el.style.fontSize = `${Math.max(16, Math.round(box.height * 0.38))}px`;
-    el.style.borderRadius = `${box.height / 2}px`;
+  titleEl.textContent = title;
+  ok.textContent = confirmLabel || "Listo";
+  input.value = value || "";
+  input.placeholder = "Nombre";
+
+  const close = (submit) => {
+    root.remove();
+    if (submit) onSubmit?.(input.value);
+    else onCancel?.();
   };
 
-  Object.assign(el.style, {
-    position: "fixed",
-    zIndex: "30",
-    margin: "0",
-    border: "0",
-    padding: "0 18px",
-    boxSizing: "border-box",
-    fontFamily: "Fredoka, sans-serif",
-    fontWeight: "600",
-    color: "#5a3d4a",
-    background: "#fff7fb",
-    boxShadow: "0 4px 0 rgba(90, 61, 74, 0.12)",
-    outline: "none",
-    textAlign: "center",
-    appearance: "none",
-    WebkitAppearance: "none",
-    touchAction: "manipulation",
-    userSelect: "text",
-    WebkitUserSelect: "text",
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    close(true);
+  });
+  cancel.addEventListener("click", () => close(false));
+  root.addEventListener("click", (event) => {
+    if (event.target === root) close(false);
   });
 
-  const emit = () => onChange(sanitizeName(el.value));
-  el.addEventListener("focus", () => {
-    focused = true;
-  });
-  el.addEventListener("blur", () => {
-    focused = false;
-    emit();
-  });
-  el.addEventListener("input", emit);
-  el.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") el.blur();
-  });
+  gameParent().appendChild(root);
+  requestAnimationFrame(() => input.focus());
+  input.select();
 
-  document.body.appendChild(el);
-  inputEl = el;
-  place();
-  return { el, place };
+  return { destroy: () => root.remove() };
 }

@@ -47,7 +47,16 @@ function start() {
     const width = Math.round(next.width * pixelRatio);
     const height = Math.round(next.height * pixelRatio);
     game.scale.setZoom(1 / pixelRatio);
-    if (Math.abs(game.scale.width - width) > 2 || Math.abs(game.scale.height - height) > 2) {
+
+    const widthChanged = Math.abs(game.scale.width - width) > 2;
+    if (widthChanged) {
+      game.scale.resize(width, height);
+      return;
+    }
+
+    // Height-only shrinks are the mobile keyboard or browser chrome.
+    // Resizing (and restarting scenes) made the setup form look broken.
+    if (height > game.scale.height + 24) {
       game.scale.resize(width, height);
     }
   };

@@ -30,6 +30,7 @@ import {
 } from "../sfx.js";
 import { makeButton, makePill, toast } from "../ui.js";
 import { view } from "../viewport.js";
+import { openNameModal } from "../nameInput.js";
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -44,7 +45,10 @@ export class GameScene extends Phaser.Scene {
     const { w, h, cx, safe, u, font } = view(this);
     this.layoutW = w;
     this.layoutH = h;
-    this.events.once("shutdown", () => this.scale.off("resize", this.handleResize, this));
+    this.events.once("shutdown", () => {
+      this.scale.off("resize", this.handleResize, this);
+      this.nameModal?.destroy();
+    });
     this.scale.on("resize", this.handleResize, this);
 
     this.add.image(cx, h / 2, "sky").setDisplaySize(w, h);
@@ -112,9 +116,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleResize(gameSize) {
-    if (Math.abs(gameSize.width - this.layoutW) < 12 && Math.abs(gameSize.height - this.layoutH) < 12) {
-      return;
-    }
+    if (Math.abs(gameSize.width - this.layoutW) < 12) return;
     this.scene.restart();
   }
 
@@ -274,13 +276,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   rename() {
-    const next = window.prompt("¿Cómo se llama tu mascota?", this.state.name);
-    if (!next) return;
-    const name = sanitizeName(next);
-    if (!name) return;
-    this.state.name = name;
-    saveState(this.state);
-    this.nameText.setText(name);
+    this.nameModal?.destroy();
+    this.nameModal = openNameModal({
+      title: "¿Cómo se llama tu mascota?",
+      value: this.state.name,
+      confirmLabel: "Guardar",
+      onSubmit: (raw) => {
+        const name = sanitizeName(raw);
+        if (!name) return;
+        this.state.name = name;
+        saveState(this.state);
+        this.nameText.setText(name);
+      },
+    });
   }
 
   tick() {
